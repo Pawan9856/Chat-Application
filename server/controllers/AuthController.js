@@ -5,7 +5,7 @@ import { compare } from "bcrypt";
 // token is valid till 3 days
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 
-const createToken = ( email, userId ) => {
+const createToken = (email, userId) => {
   return jwt.sign({ email, userId }, process.env.JWT_KEY, {
     expiresIn: maxAge,
   });
@@ -75,20 +75,53 @@ export const login = async (req, res, next) => {
 
 export const getUserInfo = async (req, res, next) => {
   try {
-    const userData= await User.findById(req.userId);
-    if(!userData){
+    const userData = await User.findById(req.userId);
+    if (!userData) {
       return res.status(404).send("User with this id not found");
     }
     return res.status(200).json({
-      
-        id: userData.id,
-        email: userData.email,
-        profileSetup: userData.profileSetup,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        image: userData.image,
-        color: userData.color,
-    
+      id: userData.id,
+      email: userData.email,
+      profileSetup: userData.profileSetup,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      image: userData.image,
+      color: userData.color,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send("Internal Server Error!!");
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { userId } = req;
+    const { firstName, lastName, color } = req.body;
+    if (!firstName || !lastName) {
+      return res
+        .status(400)
+        .send("Please provide firstName, lastName and color");
+    }
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        firstName,
+        lastName,
+        color,
+        profileSetup: true,
+      },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json({
+      id: user.id,
+      email: user.email,
+      profileSetup: user.profileSetup,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      image: user.image,
+      color: user.color,
     });
   } catch (error) {
     console.log(error);
