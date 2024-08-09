@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
-import { UPDATE_PROFILE_ROUTE } from "@/utils/constants";
+import {
+  ADD_PROFILE_IMAGE_ROUTE,
+  HOST,
+  REMOVE_PROFILE_IMAGE_ROUTE,
+  UPDATE_PROFILE_ROUTE,
+} from "@/utils/constants";
+import { useRef } from "react";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -19,12 +25,16 @@ const Profile = () => {
   const [image, setImage] = useState(null);
   const [hovered, setHovered] = useState(false);
   const [selectedColor, setSelectedColor] = useState(0);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (userInfo.profileSetup) {
       setFirstName(userInfo.firstName);
       setLastName(userInfo.lastName);
       setSelectedColor(userInfo.color);
+    }
+    if (userInfo.image) {
+      setImage(`${HOST}/${userInfo.image}`);
     }
   }, [userInfo]);
 
@@ -33,6 +43,40 @@ const Profile = () => {
       navigate("/chat");
     } else {
       toast.error("Please setup profile.");
+    }
+  };
+
+  const handleFileInputClick = () => {
+    fileInputRef.current.click();
+  };
+  const handleImageChange = async (event) => {
+    const file = event.target.files[0];
+    console.log(file);
+    if (file) {
+      const formData = new FormData();
+      formData.append("profile-image", file);
+      const res = await apiClient.post(ADD_PROFILE_IMAGE_ROUTE, formData, {
+        withCredentials: true,
+      });
+      if (res.status === 200 && res.data.image) {
+        setUserInfo({ ...userInfo, image: res.data.image });
+        toast.success("Image upload successfully");
+      }
+      
+    }
+  };
+  const handleDeleteImage = async () => {
+    try {
+      const res = await apiClient.delete(REMOVE_PROFILE_IMAGE_ROUTE, {
+        withCredentials: true,
+      });
+      if (res.status === 200) {
+        setUserInfo({...userInfo, image: null });
+        toast.success("Image deleted successfully");
+        setImage(null);
+      }
+    } catch (err) {
+      console.log(err);
     }
   };
 
@@ -101,7 +145,10 @@ const Profile = () => {
               )}
             </Avatar>
             {hovered && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 ring-fuchsia-50 rounded-full">
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-black/50 ring-fuchsia-50 rounded-full"
+                onClick={image ? handleDeleteImage : handleFileInputClick}
+              >
                 {image ? (
                   <FaTrash className="text-white text-3xl cursor-pointer" />
                 ) : (
@@ -109,7 +156,14 @@ const Profile = () => {
                 )}
               </div>
             )}
-            {/* <input type="text" /> */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleImageChange}
+              name="profile-image"
+              accept=".png, .jpg, .webp, .jpeg"
+            />
           </div>
           <div className="min-w-32 md:min-w-64 flex flex-col justify-center items-center text-white gap-5">
             <div className="w-full">
